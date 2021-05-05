@@ -34,9 +34,107 @@ Top View
 ### Code
 Below you will find the images of the source code we used for this project. If you would like to replicate our work or analyze our code closer you can do so by clicking the link at the top of this page redircting you to our main Git Hub page. From there see the "Branches" tab at the top in which you will find the branch called "Arduino Code". Inside that branch is our exact source code that you'll be able to copy and paste or review more closely. 
 
-![Code 1](https://user-images.githubusercontent.com/82110677/117055201-e6d45f80-ace8-11eb-93fc-384321561d6a.png)
+```c
+#include <LiquidCrystal.h>
+LiquidCrystal lcd(13,12,11,10,9,8);     //Connect the LCD to pins 8-13
 
-![Code 2](https://user-images.githubusercontent.com/82110677/117055435-256a1a00-ace9-11eb-88b3-ff951f879a87.png)
+int pH=A1;
+int turbidity=A0;                       //Set the variables for pH and turbidity
+
+int RedPin=6;                           //Hook LED to 3,5,6 flat edge on 6
+int GreenPin=5;
+int BluePin=3;
+
+#define SensorPin 1         //pH meter Analog output to Arduino Analog Input 0
+unsigned long int avgValue;  //Store the average value of the sensor feedback
+float b;
+int buf[10],temp;
+
+
+
+
+
+void setup() {  
+              
+  lcd.begin(16,2);
+  lcd.clear();
+
+  pinMode(RedPin, OUTPUT);
+  pinMode(GreenPin, OUTPUT);
+  pinMode(BluePin, OUTPUT);
+  pinMode(7,OUTPUT);
+ pinMode(13,OUTPUT);  
+  Serial.begin(9600);  
+  Serial.println("Ready");    //Test the serial monitor
+}
+
+void loop()
+{
+  for(int i=0;i<10;i++)       //Get 10 sample value from the sensor for smooth the value
+  { 
+    buf[i]=analogRead(SensorPin);
+    delay(10);
+  }
+  for(int i=0;i<9;i++)        //sort the analog from small to large
+  {
+    for(int j=i+1;j<10;j++)
+    {
+      if(buf[i]>buf[j])
+      {
+        temp=buf[i];
+        buf[i]=buf[j];
+        buf[j]=temp;
+      }
+    }
+  }
+  avgValue=0;
+  for(int i=2;i<8;i++)                      //take the average value of 6 center sample
+    avgValue+=buf[i];
+  float phValue=(float)avgValue*5.0/1024/6; //convert the analog into millivolt
+  phValue=3.5*phValue;                      //convert the millivolt into pH value
+  Serial.print("    pH:");  
+  Serial.print(phValue,2);
+  Serial.println(" ");
+  digitalWrite(13, HIGH);       
+  delay(800);
+  digitalWrite(13, LOW); 
+
+
+ digitalWrite (7,HIGH);              // turn LED on for sensing
+
+  pH = analogRead(A1);                 // Hook pH into A1, alos need to add in the conversion factor
+  turbidity = analogRead(A0);           // Hook phototransistor into A0 and need to add conversion
+
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("phValue: ");                   //Print the pH on the screen
+  lcd.print(phValue);
+
+  lcd.setCursor(0,1);
+  lcd.print("Turbidity: ");            //Print the Turbidity on the screen
+  lcd.print(turbidity);
+
+  delay(3000);                         // delay 5 seconds after displaying the values then clear and state if it is safe
+  lcd.clear();
+  lcd.setCursor(0,0);
+  
+  if (pH > 4  && pH < 8  && turbidity >10   && turbidity <20  )      {
+    
+  lcd.print("Safe");                      //If loop to say whether or not the values are ok
+  analogWrite(RedPin, 0);
+  analogWrite(GreenPin, 100);
+  analogWrite(BluePin, 0);
+  }
+
+  else {
+    lcd.print("Unsafe");                  // If our sensors detect that it is unsafe then display the warning message
+     analogWrite(RedPin, 100);
+     analogWrite(GreenPin, 0);
+     analogWrite(BluePin, 0);
+  }
+  
+}
+```
 
 ## Design Decision
 In order to create this system, we went through a lot of different design ideas before landing on our final design. Initially, we thought we would be able to heat the water, after determining it was unsafe to drink, but after further investigation into this process decided against it. We also decided to leave out any moving parts, such as servo motors, as this would take a lot of power and putting together two breadboards can get difficult. In the end, we determined that a pH sensor and a LED with a phototransistor would be best at determining values we could use to determine water quality. A big decision we had to make was whether to use a phototransistor or a photoresistor as they both perform similar functions. After some research and talking to Dr. Dvorak, we determined that the phototransistor would be best as it gives slightly more accurate readings. 
